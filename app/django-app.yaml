@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-app-svc
+  annotations:
+    prometheus.io/port: "8000"
+    prometheus.io/scrape: "true"
+  labels:
+    app: django-app
+    tier: api
+spec:
+  type: NodePort
+  ports:
+    - port: 8001
+      targetPort: 8000 
+      nodePort: 30001
+  selector:
+    app: django-app
+    tier: api
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+        app: django-app
+        tier: api
+  template:
+    metadata:
+      labels:
+        app: django-app
+        tier: api
+      annotations:
+        prometheus.io/scrape: "true"
+    spec:
+      containers:
+      - name: django-app
+        image: django-app:1.5
+        imagePullPolicy: Never
+        env:
+          - name: WEB_ENV
+            value: dev
+          - name: DB_NAME
+            value: blog_db
+          - name: DB_USER
+            value: neeraj
+          - name: DB_PASS
+            value: neeraj
+          - name: DB_HOST
+            value: mysql
+          - name: DB_PORT
+            value: "3306"
+          - name: JSON_LOGS
+            value: "yes"
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        volumeMounts:
+        - name: logging-vol
+          mountPath: /var/log/django
+      - name: fdlogger
+        env:
+        - name:  FLUENT_ELASTICSEARCH_HOST
+          value: "elasticsearch-master"
+        - name:  FLUENT_ELASTICSEARCH_PORT
+          value: "9200"
+        - name: FLUENT_ELASTICSEARCH_SCHEME
+          value: "http"
+        - name: FLUENT_UID
+          value: root
+        image:  govtechsg/fluentd-elasticsearch:latest
+        volumeMounts:
+        - name: logging-vol
+          mountPath: /var/log/django
+        - name: fluentd-config
+          mountPath: /fluentd/etc/
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 8000
+        
+      volumes:
+        - name: logging-vol
+          hostPath:
+            path: /var/log/django
+          # emptyDir: {}
+        - name: fluentd-config
+          configMap:
+            name: fluentd-config
+
