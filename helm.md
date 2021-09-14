@@ -91,6 +91,22 @@ To install,
 `helm install example ./mychart`
 
 
+### Managing Dependencies with requirements.yaml
+A requirements.yaml file is a simple file for listing your dependencies.
+
+```
+dependencies:
+  - name: apache
+    version: 1.2.3
+    repository: http://example.com/charts
+  - name: mysql
+    version: 3.2.1
+    repository: http://another.example.com/charts
+```
+
+The `name` field is the name of the chart you want.The `version` field is the version of the chart you want. The `repository` field is the full URL to the chart repository. Note that you must also use helm repo add to add that repo locally.
+
+
 
 # Anti Affinity
 
